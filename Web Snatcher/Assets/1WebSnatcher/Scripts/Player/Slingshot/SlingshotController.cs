@@ -1,440 +1,387 @@
-
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 namespace WebSnatcher
 {
+    /// <summary>
+    /// Web Overload: right-index pinch grabs a core between tracked hands,
+    /// right-hand backward draw charges it, release launches a swept-hit web bomb.
+    /// Keeps the SlingshotController API used by InteractionTestDirector.
+    /// </summary>
     [DisallowMultipleComponent]
+    [DefaultExecutionOrder(110)]
     public sealed class SlingshotController : MonoBehaviour
     {
-        private enum SlingState
-        {
-            Inactive,
-            Ready,
-            Drawing,
-            Fired
-        }
+        private enum Mode { Inactive, Ready, Drawing, Recovering }
 
-        [Header("Tracking")]
+        [Header("Auto-resolved Rig")]
         [SerializeField] private Transform headset;
         [SerializeField] private Transform leftHand;
         [SerializeField] private Transform rightHand;
         [SerializeField] private OVRHand leftOVRHand;
         [SerializeField] private OVRHand rightOVRHand;
 
-        [Header("Slingshot")]
-        [SerializeField, Min(0.05f)]
-        private float minimumDraw = 0.08f;
+        [Header("Target (optional for aim assist)")]
+        [SerializeField] private BossHitTarget boss;
+        [SerializeField, Range(0f, 20f)] private float maxAssistAngle = 11f;
+        [SerializeField, Range(0f, 1f)] private float assistBlend = 0.6f;
 
-        [SerializeField, Min(0.1f)]
-        private float maximumDraw = 0.45f;
+        [Header("Draw and Fire")]
+        [SerializeField, Min(0.03f)] private float minimumDraw = 0.09f;
+        [SerializeField, Min(0.1f)] private float maximumDraw = 0.38f;
+        [SerializeField, Min(0.1f)] private float minimumSpeed = 7f;
+        [SerializeField, Min(0.1f)] private float maximumSpeed = 17f;
+        [SerializeField, Min(0.05f)] private float recoverySeconds = 0.28f;
+        [SerializeField, Min(0f)] private float minimumBackwardFraction = 0.55f;
+        [SerializeField, Min(0.02f)] private float coreGrabRadius = 0.26f;
+        [SerializeField, Min(0f)] private float muzzleForwardOffset = 0.12f;
+        [SerializeField] private bool requireGrabNearCore = true;
 
-        [SerializeField, Min(0.1f)]
-        private float launchSpeed = 5f;
+        [Header("Web Graphics")]
+        [SerializeField] private Color silkColor = new Color(0.94f, 0.90f, 0.82f, 1f);
+        [SerializeField] private Color chargeColor = new Color(0.91f, 0.40f, 0.25f, 1f);
+        [SerializeField] private float mainStrandWidth = 0.005f;
+        [SerializeField] private float supportingStrandWidth = 0.0018f;
+        [SerializeField] private float coreSize = 0.065f;
 
-        [SerializeField, Min(0f)]
-        private float additionalSpeedPerMetre = 20f;
-
-        [SerializeField, Min(0.1f)]
-        private float maximumLaunchSpeed = 16f;
-
-        [Header("Visuals")]
-        [SerializeField] private Color webColor =
-            new Color(0f, 0.95f, 1f, 1f);
-
-        [SerializeField] private float webWidth = 0.006f;
-        [SerializeField] private float projectileSize = 0.12f;
-
-        [Header("Test Controls")]
+        [Header("Editor Debug")]
         [SerializeField] private bool editorKeyboardSimulation = true;
-        [SerializeField] private float editorPullSpeed = 0.5f;
+        [SerializeField] private bool editorBHotkeyWithoutTestDirector = false;
+        [SerializeField, Min(0.05f)] private float editorPullSpeed = 0.65f;
+        [SerializeField] private bool logStateChanges = true;
 
-        private SlingState state = SlingState.Inactive;
+        public bool IsBossPhaseActive => mode != Mode.Inactive;
+        public bool IsDrawing => mode == Mode.Drawing;
+        public float NormalizedCharge { get; private set; }
 
-        private LineRenderer band;
-        private Material visualMaterial;
-        private Transform loadedOrb;
-
-        private Vector3 launchOrigin;
-        private Vector3 handToOrbOffset;
-        private Vector3 simulatedPullOffset;
+        private Mode mode = Mode.Inactive;
+        private LineRenderer leftMain, rightMain, leftFine, rightFine, chargeRing;
+        private Material silkMat, chargeMat, coreMat;
+        private Transform core;
+        private Vector3 restAtGrab;
+        private Vector3 rightAtGrab;
+        private Vector3 leftAtGrab;
+        private Vector3 virtualPull;
         private Vector3 drawPosition;
-
-        private bool previousPinch;
-
-        public bool IsBossPhaseActive =>
-            state != SlingState.Inactive;
+        private bool priorPinch;
+        private float recoveryUntil;
+        private readonly Vector3[] ringPoints = new Vector3[33];
+        private bool warnedMissing;
 
         private void Awake()
         {
-            ResolveReferences();
+            FindReferences();
             CreateVisuals();
-            SetVisualsVisible(false);
+            SetVisuals(false);
         }
 
-        private void ResolveReferences()
+        private void FindReferences()
         {
-            OVRCameraRig rig =
-                FindFirstObjectByType<OVRCameraRig>();
-
+            OVRCameraRig rig = FindFirstObjectByType<OVRCameraRig>();
             if (rig != null)
             {
-                if (headset == null)
-                    headset = rig.centerEyeAnchor;
-
-                if (leftHand == null)
-                    leftHand = rig.leftHandAnchor;
-
-                if (rightHand == null)
-                    rightHand = rig.rightHandAnchor;
+                if (headset == null) headset = rig.centerEyeAnchor;
+                if (leftHand == null) leftHand = rig.leftHandAnchor;
+                if (rightHand == null) rightHand = rig.rightHandAnchor;
             }
-
-            if (headset == null && Camera.main != null)
-                headset = Camera.main.transform;
-
-            OVRHand[] hands =
-                FindObjectsByType<OVRHand>(
-                    FindObjectsInactive.Include,
-                    FindObjectsSortMode.None);
-
-            foreach (OVRHand hand in hands)
+            if (headset == null && Camera.main != null) headset = Camera.main.transform;
+            if (leftOVRHand == null || rightOVRHand == null)
             {
-                if (hand.GetHand() == OVRPlugin.Hand.HandLeft &&
-                    leftOVRHand == null)
-                    leftOVRHand = hand;
+                OVRHand[] hands = FindObjectsByType<OVRHand>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                foreach (OVRHand h in hands)
+                {
+                    if (h.GetHand() == OVRPlugin.Hand.HandLeft && leftOVRHand == null) leftOVRHand = h;
+                    if (h.GetHand() == OVRPlugin.Hand.HandRight && rightOVRHand == null) rightOVRHand = h;
+                }
 
-                if (hand.GetHand() == OVRPlugin.Hand.HandRight &&
-                    rightOVRHand == null)
-                    rightOVRHand = hand;
             }
+            if (boss == null) boss = FindFirstObjectByType<BossHitTarget>();
+        }
 
+        private static Material MakeMaterial(string name, Color color)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+            {
+                Debug.LogError("[WebSnatcher] Missing URP Unlit shader. Keep the URP shader included in the Quest build.");
+                return null;
+            }
+            Material m = new Material(shader) { name = name };
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+            else if (m.HasProperty("_Color")) m.SetColor("_Color", color);
+            return m;
+        }
+
+        private LineRenderer CreateLine(string name, Material mat, float width, int points)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            LineRenderer l = go.AddComponent<LineRenderer>();
+            l.useWorldSpace = true;
+            l.sharedMaterial = mat;
+            l.positionCount = points;
+            l.widthMultiplier = width;
+            l.numCapVertices = 3;
+            l.shadowCastingMode = ShadowCastingMode.Off;
+            l.receiveShadows = false;
+            return l;
         }
 
         private void CreateVisuals()
         {
-            Shader shader = Shader.Find(
-                "Universal Render Pipeline/Unlit");
+            silkMat = MakeMaterial("WS_Overload_Silk", silkColor);
+            chargeMat = MakeMaterial("WS_Overload_Charge", chargeColor);
+            coreMat = MakeMaterial("WS_Overload_Core", silkColor);
 
-            if (shader == null)
-                shader = Shader.Find("Unlit/Color");
+            leftMain = CreateLine("Overload_LeftWeb", silkMat, mainStrandWidth, 9);
+            rightMain = CreateLine("Overload_RightWeb", silkMat, mainStrandWidth, 9);
+            leftFine = CreateLine("Overload_LeftFilament", chargeMat, supportingStrandWidth, 9);
+            rightFine = CreateLine("Overload_RightFilament", chargeMat, supportingStrandWidth, 9);
+            chargeRing = CreateLine("Overload_ChargeHalo", chargeMat, 0.002f, ringPoints.Length);
 
-            visualMaterial = new Material(shader);
-            visualMaterial.name = "WS_Slingshot_Runtime";
-
-            if (visualMaterial.HasProperty("_BaseColor"))
-                visualMaterial.SetColor("_BaseColor", webColor);
-            else if (visualMaterial.HasProperty("_Color"))
-                visualMaterial.SetColor("_Color", webColor);
-
-            GameObject bandObject =
-                new GameObject("Slingshot_Web_Band");
-
-            bandObject.transform.SetParent(transform, false);
-
-            band = bandObject.AddComponent<LineRenderer>();
-            band.positionCount = 3;
-            band.useWorldSpace = true;
-            band.widthMultiplier = webWidth;
-            band.numCapVertices = 4;
-            band.sharedMaterial = visualMaterial;
-            band.shadowCastingMode = ShadowCastingMode.Off;
-            band.receiveShadows = false;
-
-            GameObject orb = GameObject.CreatePrimitive(
-                PrimitiveType.Sphere);
-
-            orb.name = "Slingshot_Loaded_Orb";
-            orb.transform.SetParent(transform, false);
-            orb.transform.localScale =
-                Vector3.one * projectileSize;
-
-            Collider orbCollider = orb.GetComponent<Collider>();
-            if (orbCollider != null)
-                Destroy(orbCollider);
-
-            orb.GetComponent<Renderer>().sharedMaterial =
-                visualMaterial;
-
-            loadedOrb = orb.transform;
+            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            visual.name = "Overload_WebCore";
+            visual.transform.SetParent(transform, false);
+            visual.transform.localScale = Vector3.one * coreSize;
+            Collider c = visual.GetComponent<Collider>();
+            if (c != null) Destroy(c);
+            visual.GetComponent<Renderer>().sharedMaterial = coreMat;
+            core = visual.transform;
         }
 
         public void ActivateBossPhase()
         {
-            if (headset == null)
-                ResolveReferences();
-
-            state = SlingState.Ready;
-            previousPinch = false;
-            simulatedPullOffset = Vector3.zero;
-
-            SetVisualsVisible(true);
-
-            Debug.Log("[WebSnatcher] SLINGSHOT READY!");
+            if (headset == null || leftHand == null || rightHand == null) FindReferences();
+            mode = Mode.Ready;
+            priorPinch = false;
+            virtualPull = Vector3.zero;
+            NormalizedCharge = 0;
+            SetVisuals(true);
+            if (logStateChanges) Debug.Log("[WebSnatcher] WEB OVERLOAD READY", this);
         }
 
         public void DeactivateBossPhase()
         {
-            state = SlingState.Inactive;
-            previousPinch = false;
-            simulatedPullOffset = Vector3.zero;
-            SetVisualsVisible(false);
+            mode = Mode.Inactive;
+            priorPinch = false;
+            virtualPull = Vector3.zero;
+            NormalizedCharge = 0;
+            SetVisuals(false);
         }
+
+        private void OnDisable() => DeactivateBossPhase();
+
+        private bool ValidHands()
+        {
+#if UNITY_EDITOR
+            if (editorKeyboardSimulation && Keyboard.current != null && Keyboard.current.gKey.isPressed)
+                return true;
+#endif
+            return leftOVRHand != null && rightOVRHand != null &&
+                   leftOVRHand.IsTracked && leftOVRHand.IsDataValid &&
+                   rightOVRHand.IsTracked && rightOVRHand.IsDataValid;
+        }
+
+        private bool RightPinching()
+        {
+            bool pinching = rightOVRHand != null && rightOVRHand.IsTracked &&
+                            rightOVRHand.IsDataValid &&
+                            !rightOVRHand.IsSystemGestureInProgress &&
+                            rightOVRHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
+#if UNITY_EDITOR
+            if (editorKeyboardSimulation && Keyboard.current != null)
+                pinching |= Keyboard.current.gKey.isPressed;
+#endif
+            return pinching;
+        }
+
+        private Vector3 RestPosition() => (leftHand.position + rightHand.position) * 0.5f;
 
         private void Update()
         {
 #if UNITY_EDITOR
-            // Test shortcut: B toggles the boss slingshot.
-            if (editorKeyboardSimulation &&
-                Keyboard.current != null &&
-                Keyboard.current.bKey.wasPressedThisFrame)
+            // B toggles only when not controlled by the test director.
+            if (editorKeyboardSimulation && Keyboard.current != null &&
+                Keyboard.current.bKey.wasPressedThisFrame &&
+                editorBHotkeyWithoutTestDirector)
             {
-                if (IsBossPhaseActive)
-                    DeactivateBossPhase();
-                else
-                    ActivateBossPhase();
+                if (IsBossPhaseActive) DeactivateBossPhase();
+                else ActivateBossPhase();
             }
 #endif
-
-            if (state == SlingState.Inactive)
+            if (mode == Mode.Inactive) return;
+            if (headset == null || leftHand == null || rightHand == null)
+            {
+                if (!warnedMissing) { Debug.LogWarning("[WebSnatcher] Assign headset + two hand anchors.", this); warnedMissing = true; }
                 return;
+            }
 
-            if (headset == null ||
-                leftHand == null ||
-                rightHand == null)
+            bool tracked = ValidHands();
+            bool pinch = tracked && RightPinching();
+            if (!tracked && mode == Mode.Drawing)
+            {
+                CancelDraw(); // never fire on tracking loss
+                priorPinch = false;
+                UpdateGraphics(RestPosition(), 0f);
                 return;
-
-            UpdateInteraction();
-            UpdateBand();
-        }
-
-        private bool IsRightPinching()
-        {
-            bool pinch = false;
-
-            if (rightOVRHand != null &&
-                rightOVRHand.IsTracked &&
-                rightOVRHand.IsDataValid)
-            {
-                pinch = rightOVRHand.GetFingerIsPinching(
-                    OVRHand.HandFinger.Index);
             }
 
-#if UNITY_EDITOR
-            if (editorKeyboardSimulation &&
-                Keyboard.current != null)
+            if (mode == Mode.Recovering && Time.time >= recoveryUntil)
+                mode = Mode.Ready;
+
+            if (mode == Mode.Ready && pinch && !priorPinch && tracked)
+                TryBeginDraw();
+            else if (mode == Mode.Drawing)
             {
-                pinch |= Keyboard.current.gKey.isPressed;
-            }
-#endif
-
-            return pinch;
-        }
-
-        private bool CanTrackHands()
-        {
-#if UNITY_EDITOR
-            if (editorKeyboardSimulation &&
-                Keyboard.current != null &&
-                Keyboard.current.gKey.isPressed)
-                return true;
-#endif
-
-            return leftOVRHand != null &&
-                   rightOVRHand != null &&
-                   leftOVRHand.IsTracked &&
-                   rightOVRHand.IsTracked &&
-                   leftOVRHand.IsDataValid &&
-                   rightOVRHand.IsDataValid;
-        }
-
-        private Vector3 GetRestPosition()
-        {
-            // Orb sits halfway between tracked hands.
-            return (leftHand.position + rightHand.position) * 0.5f;
-        }
-
-        private void UpdateInteraction()
-        {
-            bool tracked = CanTrackHands();
-            bool pinching = tracked && IsRightPinching();
-
-            if (!tracked && state == SlingState.Drawing)
-            {
-                CancelDraw();
-                pinching = false;
+                if (pinch) UpdateDraw();
+                else if (priorPinch && tracked) FireOrCancel();
             }
 
-            if (state == SlingState.Ready ||
-                state == SlingState.Fired)
-            {
-                loadedOrb.position = GetRestPosition();
-
-                if (pinching && !previousPinch)
-                {
-                    BeginDraw();
-                }
-            }
-            else if (state == SlingState.Drawing)
-            {
-                if (pinching)
-                {
-                    UpdateDrawPosition();
-                }
-                else if (previousPinch && tracked)
-                {
-                    ReleaseProjectile();
-                }
-            }
-
-            previousPinch = pinching;
+            priorPinch = pinch;
+            Vector3 pos = mode == Mode.Drawing ? drawPosition : RestPosition();
+            UpdateGraphics(pos, NormalizedCharge);
         }
 
-        private void BeginDraw()
+        private void TryBeginDraw()
         {
-            state = SlingState.Drawing;
-
-            launchOrigin = GetRestPosition();
-
-            handToOrbOffset =
-                launchOrigin - rightHand.position;
-
-            simulatedPullOffset = Vector3.zero;
-            drawPosition = launchOrigin;
-
-            Debug.Log("[WebSnatcher] SLINGSHOT GRABBED!");
+            Vector3 rest = RestPosition();
+            if (requireGrabNearCore && Vector3.Distance(rightHand.position, rest) > coreGrabRadius)
+            {
+                if (logStateChanges) Debug.Log("[WebSnatcher] Move hands a little closer to load web core.", this);
+                return;
+            }
+            mode = Mode.Drawing;
+            restAtGrab = rest;
+            rightAtGrab = rightHand.position;
+            leftAtGrab = leftHand.position;
+            drawPosition = rest;
+            virtualPull = Vector3.zero;
+            NormalizedCharge = 0f;
+            if (logStateChanges) Debug.Log("[WebSnatcher] WEB CORE GRABBED", this);
         }
 
-        private void UpdateDrawPosition()
+        private void UpdateDraw()
         {
 #if UNITY_EDITOR
-            if (editorKeyboardSimulation &&
-                Keyboard.current != null &&
-                Keyboard.current.spaceKey.isPressed)
-            {
-                simulatedPullOffset -=
-                    headset.forward *
-                    editorPullSpeed * Time.deltaTime;
-            }
+            if (editorKeyboardSimulation && Keyboard.current != null && Keyboard.current.spaceKey.isPressed)
+                virtualPull -= headset.forward * (editorPullSpeed * Time.deltaTime);
 #endif
+            // Track how the right hand moves RELATIVE to a moving two-hand midpoint.
+            Vector3 restNow = RestPosition();
+            // Measure full right-hand travel relative to the supporting left hand.
+            Vector3 relativeDelta = (rightHand.position - rightAtGrab) - (leftHand.position - leftAtGrab);
+            Vector3 requested = relativeDelta + virtualPull;
 
-            Vector3 desired =
-                rightHand.position +
-                handToOrbOffset +
-                simulatedPullOffset;
-
-            Vector3 displacement = desired - launchOrigin;
-
-            displacement = Vector3.ClampMagnitude(
-                displacement, maximumDraw);
-
-            drawPosition = launchOrigin + displacement;
-            loadedOrb.position = drawPosition;
+            // Only backward draw charges the weapon. Keep sideways motion for a little natural give.
+            float back = Mathf.Clamp(Vector3.Dot(requested, -headset.forward), 0f, maximumDraw);
+            Vector3 sideways = Vector3.ProjectOnPlane(requested, headset.forward);
+            sideways = Vector3.ClampMagnitude(sideways, maximumDraw * 0.22f);
+            drawPosition = restNow - headset.forward * back + sideways;
+            NormalizedCharge = Mathf.Clamp01(back / maximumDraw);
         }
 
-        private void ReleaseProjectile()
+        private void FireOrCancel()
         {
-            Vector3 draw = launchOrigin - drawPosition;
-
-            float totalDraw = draw.magnitude;
-
-            // Drawing backward relative to head forward
-            // must contribute to charging the slingshot.
-            float backwardDraw = Vector3.Dot(
-                drawPosition - launchOrigin,
-                -headset.forward);
-
-            if (totalDraw < minimumDraw ||
-                backwardDraw < minimumDraw * 0.5f)
+            float backwards = Vector3.Dot(RestPosition() - drawPosition, headset.forward);
+            if (backwards < minimumDraw || NormalizedCharge < minimumBackwardFraction * minimumDraw / maximumDraw)
             {
                 CancelDraw();
                 return;
             }
 
-            float speed = Mathf.Min(
-                maximumLaunchSpeed,
-                launchSpeed +
-                totalDraw * additionalSpeedPerMetre);
+            float charge = NormalizedCharge;
+            Vector3 direction = headset.forward;
+            Vector3 spawn = RestPosition() + direction * muzzleForwardOffset;
 
-            Vector3 direction = draw.normalized;
+            if (boss == null || !boss.isActiveAndEnabled) boss = FindFirstObjectByType<BossHitTarget>();
+            if (boss != null && !boss.IsDefeated)
+            {
+                Collider bossCollider = boss.GetComponentInChildren<Collider>();
+                Vector3 target = bossCollider != null ? bossCollider.bounds.center : boss.transform.position;
+                Vector3 towardBoss = target - spawn;
+                if (towardBoss.sqrMagnitude > 0.0001f &&
+                    Vector3.Angle(direction, towardBoss) <= maxAssistAngle)
+                    direction = Vector3.Slerp(direction, towardBoss.normalized, assistBlend).normalized;
+            }
 
-            SpawnProjectile(
-                drawPosition,
-                direction * speed);
+            float speed = Mathf.Lerp(minimumSpeed, maximumSpeed, charge);
+            WebOverloadProjectile.LaunchNew(spawn, direction * speed, boss, charge, silkColor, chargeColor);
+            if (logStateChanges) Debug.Log($"[WebSnatcher] WEB OVERLOAD FIRED - charge {charge:P0}", this);
 
-            state = SlingState.Fired;
-            simulatedPullOffset = Vector3.zero;
-
-            Debug.Log(
-                $"[WebSnatcher] SLINGSHOT FIRED! " +
-                $"Speed: {speed:F1} m/s");
-        }
-
-        private void SpawnProjectile(
-            Vector3 position, Vector3 velocity)
-        {
-            GameObject projectile =
-                GameObject.CreatePrimitive(PrimitiveType.Sphere);
-
-            projectile.name = "WebSlingshot_Projectile";
-            projectile.transform.position = position;
-            projectile.transform.localScale =
-                Vector3.one * projectileSize;
-
-            projectile.GetComponent<Renderer>()
-                .sharedMaterial = visualMaterial;
-
-            int layer = LayerMask.NameToLayer("WebProjectile");
-            if (layer >= 0)
-                projectile.layer = layer;
-
-            // Add the Rigidbody before the projectile
-            // behavior so its Awake() can configure it.
-            Rigidbody body =
-                projectile.AddComponent<Rigidbody>();
-
-            body.useGravity = false;
-            body.collisionDetectionMode =
-                CollisionDetectionMode.ContinuousDynamic;
-
-            WebProjectile behavior =
-                projectile.AddComponent<WebProjectile>();
-
-            behavior.Launch(velocity);
+            mode = Mode.Recovering;
+            recoveryUntil = Time.time + recoverySeconds;
+            virtualPull = Vector3.zero;
+            NormalizedCharge = 0;
         }
 
         private void CancelDraw()
         {
-            state = SlingState.Ready;
-            simulatedPullOffset = Vector3.zero;
-            loadedOrb.position = GetRestPosition();
+            mode = Mode.Ready;
+            virtualPull = Vector3.zero;
+            NormalizedCharge = 0;
         }
 
-        private void UpdateBand()
+        private void UpdateGraphics(Vector3 orbPosition, float charge)
         {
-            if (band == null || loadedOrb == null)
-                return;
+            if (core == null) return;
+            core.position = orbPosition;
+            core.localScale = Vector3.one * coreSize * (1f + 0.4f * charge + 0.045f * Mathf.Sin(Time.time * (5f + 16f * charge)));
+            DrawArm(leftMain, leftHand.position, orbPosition, 0f, charge);
+            DrawArm(rightMain, rightHand.position, orbPosition, 0f, charge);
+            DrawArm(leftFine, leftHand.position, orbPosition, 0.012f, charge);
+            DrawArm(rightFine, rightHand.position, orbPosition, -0.012f, charge);
 
-            Vector3 orbPosition = loadedOrb.position;
-
-            band.SetPosition(0, leftHand.position);
-            band.SetPosition(1, orbPosition);
-            band.SetPosition(2, rightHand.position);
+            // Small halo around charged web core, billboarded toward player.
+            chargeRing.enabled = charge > 0.12f;
+            if (chargeRing.enabled)
+            {
+                Vector3 towardEye = headset.position - orbPosition;
+                if (towardEye.sqrMagnitude < 0.001f) towardEye = -headset.forward;
+                Quaternion q = Quaternion.LookRotation(towardEye, Vector3.up);
+                float radius = coreSize * (0.7f + charge * 0.9f);
+                for (int i = 0; i < ringPoints.Length; i++)
+                {
+                    float a = i * Mathf.PI * 2f / (ringPoints.Length - 1);
+                    ringPoints[i] = orbPosition + q * new Vector3(Mathf.Cos(a) * radius, Mathf.Sin(a) * radius, 0f);
+                }
+                chargeRing.SetPositions(ringPoints);
+            }
         }
 
-        private void SetVisualsVisible(bool visible)
+        private void DrawArm(LineRenderer line, Vector3 start, Vector3 end, float spread, float charge)
         {
-            if (band != null)
-                band.enabled = visible;
+            if (line == null) return;
+            Vector3 direction = end - start;
+            Vector3 side = Vector3.Cross(direction, headset.forward).normalized;
+            for (int i = 0; i < 9; i++)
+            {
+                float t = i / 8f;
+                Vector3 point = Vector3.Lerp(start, end, t);
+                float arch = Mathf.Sin(t * Mathf.PI);
+                point += Vector3.down * (0.025f * (1f - charge) * arch);
+                point += side * spread * arch;
+                line.SetPosition(i, point);
+            }
+            line.widthMultiplier = (line == leftMain || line == rightMain ? mainStrandWidth : supportingStrandWidth) * (1f + charge * 0.8f);
+        }
 
-            if (loadedOrb != null)
-                loadedOrb.gameObject.SetActive(visible);
+        private void SetVisuals(bool show)
+        {
+            if (leftMain != null) leftMain.enabled = show;
+            if (rightMain != null) rightMain.enabled = show;
+            if (leftFine != null) leftFine.enabled = show;
+            if (rightFine != null) rightFine.enabled = show;
+            if (chargeRing != null) chargeRing.enabled = false;
+            if (core != null) core.gameObject.SetActive(show);
         }
 
         private void OnDestroy()
         {
-            if (visualMaterial != null)
-                Destroy(visualMaterial);
+            if (silkMat != null) Destroy(silkMat);
+            if (chargeMat != null) Destroy(chargeMat);
+            if (coreMat != null) Destroy(coreMat);
         }
     }
 }

@@ -116,7 +116,7 @@ MonoBehaviour:
   visualRoot: {fileID: 0}
   minPlayerDistance: 1.55
   maxPlayerDistance: 3.3
-  maxHorizontalAngle: 105
+  maxHorizontalAngle: 145
   eyeRelativeHeightRange: {x: -0.15, y: 0.75}
   roomWallClearance: 0.25
   obstacleClearance: 0.3
@@ -128,14 +128,17 @@ MonoBehaviour:
   requireFirstPatrolBeforeAttack: 1
   attackFacingTolerance: 16
   minimumPatrolBeforeAttackSeconds: 2
-  cruiseSpeed: 0.7
-  acceleration: 1.8
-  turnSpeedDegrees: 190
+  cruiseSpeed: 1.15
+  acceleration: 2.6
+  turnSpeedDegrees: 240
   waypointArrivalDistance: 0.16
   hoverSecondsRange: {x: 0.8, y: 1.8}
   hoverBob: 0.025
   bankDegrees: 6
   waypointCruiseFraction: 0.65
+  desiredBearingChange: 38
+  sectorNoveltyWeight: 1.5
+  travelPreference: 0.4
   waypointAttempts: 36
   fallbackRecheckSeconds: 1
   debugDraw: 1
@@ -183,15 +186,15 @@ MonoBehaviour:
   modelAnimator: {fileID: 0}
   attackAutomatically: 1
   attackOnlyWhileHovering: 1
-  attackIntervalSeconds: {x: 4.5, y: 6}
+  attackIntervalSeconds: {x: 3.5, y: 4.8}
   warningSeconds: 0.9
-  projectileSpeed: 1.6
+  projectileSpeed: 2.5
   projectileRadius: 0.07
   playerHitRadius: 0.2
   maxFireAngleFromHeadset: 75
   maxFireDistance: 6
   facingToleranceDegrees: 16
-  aimSettleSeconds: 0.35
+  aimSettleSeconds: 0.3
   pauseFlightDuringWarning: 1
   attackTriggerParameter: 
   logEvents: 1

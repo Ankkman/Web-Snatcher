@@ -20,7 +20,7 @@ namespace WebSnatcher
         [Header("Flight Zone (meters)")]
         [SerializeField, Min(0.5f)] private float minPlayerDistance = 1.55f;
         [SerializeField, Min(0.8f)] private float maxPlayerDistance = 3.3f;
-        [SerializeField, Range(10f, 155f)] private float maxHorizontalAngle = 105f;
+        [SerializeField, Range(10f, 179f)] private float maxHorizontalAngle = 145f;
         [SerializeField] private Vector2 eyeRelativeHeightRange = new Vector2(-0.15f, 0.75f);
         [SerializeField, Min(0f)] private float roomWallClearance = 0.25f;
         [SerializeField, Min(0f)] private float obstacleClearance = 0.30f;
@@ -37,15 +37,22 @@ namespace WebSnatcher
         [SerializeField, Min(0.25f)] private float minimumPatrolBeforeAttackSeconds = 2f;
 
         [Header("Flight Motion")]
-        [SerializeField, Min(0.05f)] private float cruiseSpeed = 0.7f;
-        [SerializeField, Min(0.05f)] private float acceleration = 1.8f;
-        [SerializeField, Min(30f)] private float turnSpeedDegrees = 190f;
+        [SerializeField, Min(0.05f)] private float cruiseSpeed = 1.15f;
+        [SerializeField, Min(0.05f)] private float acceleration = 2.6f;
+        [SerializeField, Min(30f)] private float turnSpeedDegrees = 240f;
         [SerializeField, Min(0.05f)] private float waypointArrivalDistance = 0.16f;
         [SerializeField] private Vector2 hoverSecondsRange = new Vector2(0.8f, 1.8f);
         [SerializeField, Range(0f, 0.1f)] private float hoverBob = 0.025f;
         [SerializeField, Range(0f, 12f)] private float bankDegrees = 6f;
         [SerializeField, Range(0.2f, 1f)] private float waypointCruiseFraction = 0.65f;
 
+        [Header("Patrol variety")]
+        [Tooltip("Minimum desired bearing change around the player between patrol waypoints. Soft preference, not a hard ban.")]
+        [SerializeField, Range(0f, 120f)] private float desiredBearingChange = 38f;
+        [Tooltip("Higher values favor unexplored bearings rather than repeatedly picking the farthest left/right point.")]
+        [SerializeField, Range(0f, 3f)] private float sectorNoveltyWeight = 1.5f;
+        [Tooltip("How strongly the enemy prefers medium-length moves over maximum-distance zigzags.")]
+        [SerializeField, Range(0f, 2f)] private float travelPreference = 0.4f;
         [Header("Sampling")]
         [SerializeField, Range(4, 100)] private int waypointAttempts = 36;
         [SerializeField, Min(0.1f)] private float fallbackRecheckSeconds = 1f;
@@ -111,6 +118,9 @@ namespace WebSnatcher
         private Vector3 patrolForward;
         private bool placedInRoom;
         private bool warnedMisalignment;
+        private float lastSelectedBearing;
+        private float previousSelectedBearing;
+        private bool hasBearingHistory;
         private float nextPlacementRetry;
         private const float Tiny = 0.0001f;
 
@@ -366,16 +376,35 @@ namespace WebSnatcher
                 if (requireTravel && !IsPathSafe(transform.position, candidate)) continue;
 
                 validCount++;
-                // Favor noticeable lateral flight, but avoid repeatedly selecting the farthest point.
-                Vector3 delta = candidate - transform.position;
-                float lateral = Mathf.Abs(Vector3.Dot(delta, headset.right));
-                float travel = delta.magnitude;
-                float score = lateral * 0.7f - Mathf.Abs(travel - 1.5f) * 0.45f
-                    + Random.Range(0f, 0.4f);
+                // Reward a different bearing relative to the player, not just left/right extremes.
+                // This maintains patrol variety even when the MRUK room offers relatively few safe paths.
+                Vector3 playerToCandidate = Vector3.ProjectOnPlane(candidate - eye, Vector3.up);
+                Vector3 playerToCurrent = Vector3.ProjectOnPlane(transform.position - eye, Vector3.up);
+                float bearing = Vector3.SignedAngle(flatForward, playerToCandidate, Vector3.up);
+                float angleTravel = playerToCurrent.sqrMagnitude > Tiny
+                    ? Vector3.Angle(playerToCurrent, playerToCandidate) : 90f;
+                float novelty = !hasBearingHistory ? 1f :
+                    Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(bearing, lastSelectedBearing)) /
+                    Mathf.Max(1f, desiredBearingChange));
+                float olderNovelty = !hasBearingHistory ? 1f :
+                    Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(bearing, previousSelectedBearing)) / 75f);
+                float travel = (candidate - transform.position).magnitude;
+                float distancePreference = 1f - Mathf.Clamp01(Mathf.Abs(travel - 1.3f) / 2f);
+                float score = sectorNoveltyWeight * (novelty * 0.7f + olderNovelty * 0.3f)
+                    + Mathf.Clamp01(angleTravel / 70f) * 0.35f
+                    + distancePreference * travelPreference
+                    + Random.Range(0f, 0.65f);
                 if (score > bestScore) { bestScore = score; best = candidate; }
             }
             if (validCount == 0) return false;
             result = best;
+            Vector3 bearingVector = Vector3.ProjectOnPlane(best - eye, Vector3.up);
+            if (bearingVector.sqrMagnitude > Tiny)
+            {
+                previousSelectedBearing = lastSelectedBearing;
+                lastSelectedBearing = Vector3.SignedAngle(flatForward, bearingVector, Vector3.up);
+                hasBearingHistory = true;
+            }
             return true;
         }
 

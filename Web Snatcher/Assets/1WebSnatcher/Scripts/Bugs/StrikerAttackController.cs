@@ -54,6 +54,7 @@ namespace WebSnatcher
         public int TestHealth { get; private set; }
         public float DifficultyMultiplier { get; private set; } = 1f;
         public bool IsTelegraphing => state == AttackState.Telegraph;
+        public EnemyProjectile ActiveProjectile => projectile;
 
         private AttackState state;
         private float nextAttackAt;

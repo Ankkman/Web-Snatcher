@@ -150,6 +150,7 @@ Transform:
   m_Children:
   - {fileID: 32993085}
   - {fileID: 916903948}
+  - {fileID: 1574364515}
   - {fileID: 398875334}
   - {fileID: 173625883}
   m_Father: {fileID: 1947113805}
@@ -435,7 +436,6 @@ Transform:
   m_Children:
   - {fileID: 1861839500}
   - {fileID: 726317690}
-  - {fileID: 1497205038}
   m_Father: {fileID: 20136632}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &175963030
@@ -746,6 +746,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 398875334}
+  - component: {fileID: 398875335}
   m_Layer: 0
   m_Name: AudioManager
   m_TagString: Untagged
@@ -768,6 +769,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 20136632}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &398875335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 398875333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dd6fecce30a40d449f81d19936a6ba9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.WebSnatcherAudio
+  game: {fileID: 0}
+  overload: {fileID: 0}
+  shield: {fileID: 0}
+  tether: {fileID: 0}
+  audioEnabled: 1
+  masterVolume: 0.65
+  combatVolume: 0.85
+  uiVolume: 0.55
+  sampleRate: 22050
+  debugKeyboardSounds: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1079,8 +1102,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.WebTetherController
   gaze: {fileID: 0}
   fistInput: {fileID: 0}
-  headset: {fileID: 863828756}
-  rightHand: {fileID: 499725425}
+  headset: {fileID: 0}
+  rightHand: {fileID: 0}
   containmentOrb: {fileID: 612773927}
   webVisual: {fileID: 0}
   webAttachment: {fileID: 0}
@@ -1090,13 +1113,16 @@ MonoBehaviour:
   catchTravelSeconds: 0.32
   maxHoldSeconds: 3
   cancelOnOpenBeforeYank: 1
-  orbLocalPosition: {x: -0.28, y: -0.34, z: 0.66}
-  orbDiameter: 0.09
+  maxBodySplatRadius: 0.055
+  useBodyAttachment: 1
+  orbLocalPosition: {x: 0.12, y: -0.32, z: 0.58}
+  orbDiameter: 0.062
   orbPulseStrength: 0.24
   orbPulseSeconds: 0.25
   orbColor: {r: 0.24, g: 0.2, b: 0.22, a: 1}
   editorKeyboardPull: 1
   editorPullSpeed: 0.35
+  logCatchEvents: 1
 --- !u!114 &610325056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1164,7 +1190,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 978280082}
   m_Father: {fileID: 99158166}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &651747852
@@ -1218,6 +1245,64 @@ MonoBehaviour:
   logStateChanges: 1
   handTracked: 0
   recognizerActive: 0
+--- !u!1 &675388968
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 675388969}
+  - component: {fileID: 675388970}
+  m_Layer: 0
+  m_Name: OverloadTargetingHUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &675388969
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 675388968}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.76763, y: -2.56931, z: -1.4912}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1859760964}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &675388970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 675388968}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 536e5a2fad1e9a14ea6b50526bfba3a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.OverloadTargetingHUD
+  game: {fileID: 0}
+  overload: {fileID: 0}
+  head: {fileID: 0}
+  hudDistance: 1.4
+  canvasScale: 0.0012
+  bracketSize: 86
+  bracketLength: 16
+  bracketThickness: 2
+  verticalOffset: 0
+  amber: {r: 1, g: 0.62, b: 0.27, a: 1}
+  brightAmber: {r: 1, g: 0.88, b: 0.56, a: 1}
+  missRed: {r: 1, g: 0.28, b: 0.18, a: 1}
+  missFlashSeconds: 0.55
+  pulseSpeed: 5
 --- !u!4 &687211567 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4507163522421032573, guid: 4f498c02c6abd9240965900485454116, type: 3}
@@ -1233,6 +1318,7 @@ GameObject:
   m_Component:
   - component: {fileID: 726317690}
   - component: {fileID: 726317691}
+  - component: {fileID: 726317692}
   m_Layer: 0
   m_Name: SurvivalOverload
   m_TagString: Untagged
@@ -1275,11 +1361,42 @@ MonoBehaviour:
   catchesPerCharge: 5
   aimAngle: 15
   maximumAimDistance: 7
-  shotTravelSeconds: 0.32
-  webColor: {r: 0.97, g: 0.88, b: 0.73, a: 1}
-  impactColor: {r: 1, g: 0.38, b: 0.18, a: 1}
-  orbDiameter: 0.11
+  projectileSpeed: 11
+  projectileRadius: 0.15
+  targetExtraRadius: 0.06
+  maxFlightDistance: 9
+  useColliderBounds: 1
+  webColor: {r: 0.9607843, g: 0.8156863, b: 0.5411765, a: 1}
+  impactColor: {r: 1, g: 0.7019608, b: 0, a: 1}
+  orbDiameter: 0.075
   impactSeconds: 0.38
+  logShots: 1
+--- !u!114 &726317692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 726317689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ba49036afcd810469a626d11c826dfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.OverloadCombatVFX
+  overload: {fileID: 0}
+  rightHand: {fileID: 0}
+  head: {fileID: 0}
+  silkColor: {r: 1, g: 0.76, b: 0.43, a: 1}
+  brightColor: {r: 1, g: 0.92, b: 0.72, a: 1}
+  strandWidth: 0.004
+  trailLength: 0.48
+  braidRadius: 0.016
+  braidTwists: 3
+  launchDuration: 0.13
+  hitDuration: 0.32
+  hitMaxRadius: 0.28
+  missDuration: 0.18
+  missMaxRadius: 0.085
 --- !u!1 &790121516
 GameObject:
   m_ObjectHideFlags: 0
@@ -2005,6 +2122,123 @@ MonoBehaviour:
   travelAmplitude: 0.2
   cyclesPerSecond: 0.45
   phaseOffsetDegrees: 0
+--- !u!1 &978280081
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 978280082}
+  - component: {fileID: 978280085}
+  - component: {fileID: 978280084}
+  - component: {fileID: 978280083}
+  m_Layer: 0
+  m_Name: Orb_Visual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &978280082
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 978280081}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 612773927}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &978280083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 978280081}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff046a309b241b44eac0b3368ad3e662, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.ContainmentOrbVisualV2
+  coreColor: {r: 0.08, g: 0.05, b: 0.03, a: 1}
+  ringColor: {r: 1, g: 0.58, b: 0.18, a: 1}
+  pulseColor: {r: 1, g: 0.82, b: 0.46, a: 1}
+  outerRingRadius: 0.75
+  innerRingRadius: 0.48
+  lineWidth: 0.01
+  segments: 36
+  outerRotationSpeed: 16
+  innerRotationSpeed: 28
+  corePulseAmount: 0.05
+  corePulseSpeed: 1.6
+  capturePulseDuration: 0.28
+  capturePulseScale: 1.7
+  capturePulseWidth: 0.018
+--- !u!23 &978280084
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 978280081}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &978280085
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 978280081}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1010164098
 GameObject:
   m_ObjectHideFlags: 0
@@ -2795,6 +3029,62 @@ Transform:
   m_Children: []
   m_Father: {fileID: 790121517}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1364024099
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1364024100}
+  - component: {fileID: 1364024101}
+  m_Layer: 0
+  m_Name: GameOverHUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1364024100
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1364024099}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.76763, y: -2.56931, z: -1.4912}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1859760964}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1364024101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1364024099}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 820b92c5a8042424d98d9cab5e43e934, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.SurvivalGameOverHUD
+  game: {fileID: 0}
+  fistInput: {fileID: 0}
+  head: {fileID: 0}
+  localOffset: {x: 0, y: -0.02, z: 1.4}
+  canvasScale: 0.00135
+  fadeInSeconds: 0.65
+  restartInputDelay: 1
+  amber: {r: 1, g: 0.67, b: 0.35, a: 1}
+  brightAmber: {r: 1, g: 0.86, b: 0.61, a: 1}
+  muted: {r: 0.68, g: 0.48, b: 0.32, a: 1}
+  danger: {r: 1, g: 0.34, b: 0.22, a: 1}
+  bestScoreKey: WebSnatcher_BestScore
 --- !u!1 &1413201336
 GameObject:
   m_ObjectHideFlags: 0
@@ -2969,13 +3259,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58efd94a7c3ed424498077a62406f1b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.WebShieldController
-  input: {fileID: 68665397}
-  leftHandAnchor: {fileID: 1819470267}
-  centerEye: {fileID: 863828756}
-  shieldRadius: 0.42
-  forwardOffset: 0.2
-  webColor: {r: 0.93, g: 0.88, b: 0.78, a: 1}
-  showDebugLogs: 1
+  input: {fileID: 0}
+  leftHandAnchor: {fileID: 0}
+  centerEye: {fileID: 0}
+  shieldRadius: 0.2
+  forwardOffset: 0.06
+  collisionPadding: 0.01
+  webColor: {r: 1, g: 0.64, b: 0.3, a: 1}
+  impactColor: {r: 1, g: 0.84, b: 0.48, a: 1}
+  strandWidth: 0.003
+  impactDuration: 0.24
+  showDebugLogs: 0
   requireRaisedHandOnQuest: 1
   minHandHeightBelowEyes: -0.48
   minHandForwardOfEyes: 0.16
@@ -3056,12 +3350,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1497205037}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.76763, y: -2.56931, z: -1.4912}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 173625883}
+  m_Father: {fileID: 1859760964}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1497205039
 MonoBehaviour:
@@ -3075,12 +3369,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d24e64411a16e674ea237bf8fdcdbe7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.SurvivalStatusHUD
-  game: {fileID: 0}
-  overload: {fileID: 0}
-  head: {fileID: 0}
-  localOffset: {x: -0.32, y: 0.2, z: 1.1}
-  refreshSeconds: 0.15
-  textColor: {r: 0.93, g: 0.83, b: 0.7, a: 1}
+  game: {fileID: 1861839501}
+  overload: {fileID: 726317691}
+  head: {fileID: 863828756}
+  localOffset: {x: 0, y: -0.025, z: 1.4}
+  canvasScale: 0.0014
+  amber: {r: 1, g: 0.64, b: 0.31, a: 1}
+  muted: {r: 0.64, g: 0.47, b: 0.32, a: 0.85}
+  danger: {r: 1, g: 0.3, b: 0.2, a: 1}
+  offscreenAngle: 58
+  rearAngle: 125
+  refreshInterval: 0.1
 --- !u!1001 &1554068209
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3146,6 +3445,62 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 37c47f9928e3fef4bb9a9ffaafab5526, type: 3}
+--- !u!1 &1574364514
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1574364515}
+  - component: {fileID: 1574364516}
+  m_Layer: 0
+  m_Name: OnboardingDirector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1574364515
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1574364514}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 20136632}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1574364516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1574364514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70cc4d4a5d324f34a9bee504df0cec94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.WebSnatcherOnboarding
+  game: {fileID: 1861839501}
+  fistInput: {fileID: 651747854}
+  head: {fileID: 863828756}
+  localOffset: {x: 0, y: -0.025, z: 1.4}
+  hudScale: 1
+  bootDuration: 2.7
+  briefingDuration: 3.5
+  countdownDuration: 3
+  amber: {r: 1, g: 0.55, b: 0.19, a: 1}
+  softAmber: {r: 1, g: 0.78, b: 0.48, a: 1}
+  dimAmber: {r: 0.52, g: 0.32, b: 0.17, a: 1}
+  logEvents: 1
 --- !u!1001 &1600713452
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3511,6 +3866,41 @@ Transform:
   - {fileID: 1478536111}
   m_Father: {fileID: 790121517}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1859760963
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1859760964}
+  m_Layer: 0
+  m_Name: UI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1859760964
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1859760963}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -1.76763, y: 2.56931, z: 1.4912}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1364024100}
+  - {fileID: 675388969}
+  - {fileID: 1497205038}
+  - {fileID: 1862342099}
+  m_Father: {fileID: 1947113805}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1861839499
 GameObject:
   m_ObjectHideFlags: 0
@@ -3555,6 +3945,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2c402c36a7fb464699d9b504039bb55, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.SurvivalGameManager
+  startImmediately: 0
   scoutSpawner: {fileID: 175963032}
   strikerPrefab: {fileID: 465846753435638552, guid: 469b005c3146ad941af3a1607d782bc1, type: 3}
   strikerParent: {fileID: 849921559}
@@ -3575,9 +3966,88 @@ MonoBehaviour:
   firstStrikerDelay: 20
   strikerRespawnAfterDefeat: 35
   retrySpawnSeconds: 3
-  restartAutomatically: 1
+  restartAutomatically: 0
   restartDelay: 8
   logRunEvents: 1
+--- !u!1 &1862342098
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1862342099}
+  - component: {fileID: 1862342100}
+  m_Layer: 0
+  m_Name: WebSnatcher
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1862342099
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1862342098}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1859760964}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1862342100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1862342098}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b3fd48c0bc215a4b870f7bfc9e4a9ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.WS_HUDScaleController
+  huds:
+  - hudName: Onboarding HUD
+    objectName: WS_Onboarding_TacticalHUD
+    scaleMultiplier: 2
+    positionOffset: {x: 0, y: 0, z: 0}
+    runtimeTarget: {fileID: 0}
+    baseScale: {x: 0, y: 0, z: 0}
+    basePosition: {x: 0, y: 0, z: 0}
+    captured: 0
+  - hudName: Survival HUD
+    objectName: WS_TacticalHUD_Runtime
+    scaleMultiplier: 1.4
+    positionOffset: {x: 0, y: 0, z: 0}
+    runtimeTarget: {fileID: 0}
+    baseScale: {x: 0, y: 0, z: 0}
+    basePosition: {x: 0, y: 0, z: 0}
+    captured: 0
+  - hudName: Overload Targeting
+    objectName: WS_OverloadTargeting_Runtime
+    scaleMultiplier: 1
+    positionOffset: {x: 0, y: 0, z: 0}
+    runtimeTarget: {fileID: 0}
+    baseScale: {x: 0, y: 0, z: 0}
+    basePosition: {x: 0, y: 0, z: 0}
+    captured: 0
+  - hudName: Game Over HUD
+    objectName: WS_GameOver_Runtime
+    scaleMultiplier: 2
+    positionOffset: {x: 0, y: 0, z: 0}
+    runtimeTarget: {fileID: 0}
+    baseScale: {x: 0, y: 0, z: 0}
+    basePosition: {x: 0, y: 0, z: 0}
+    captured: 0
+  applyContinuously: 1
+  searchInterval: 0.5
 --- !u!1 &1915625540
 GameObject:
   m_ObjectHideFlags: 0
@@ -3757,6 +4227,7 @@ Transform:
   - {fileID: 1193080813}
   - {fileID: 99158166}
   - {fileID: 20136632}
+  - {fileID: 1859760964}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &2047258139 stripped

@@ -75,6 +75,7 @@ GameObject:
   - component: {fileID: 5616497907352033707}
   - component: {fileID: 9093074299749521820}
   - component: {fileID: 5077761418804041453}
+  - component: {fileID: 6356901919204536793}
   m_Layer: 0
   m_Name: PF_StrikerBug
   m_TagString: Untagged
@@ -198,8 +199,34 @@ MonoBehaviour:
   pauseFlightDuringWarning: 1
   attackTriggerParameter: 
   logEvents: 1
-  showTelegraphGlow: 1
+  showTelegraphGlow: 0
   testStartingHealth: 5
+--- !u!114 &6356901919204536793
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 465846753435638552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa8cfe2173875e649aa0ea0b38713472, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebSnatcher.StrikerCombatVFX
+  attack: {fileID: 5077761418804041453}
+  muzzlePoint: {fileID: 99250896839605119}
+  playerHead: {fileID: 0}
+  amber: {r: 1, g: 0.52, b: 0.16, a: 1}
+  brightAmber: {r: 1, g: 0.85, b: 0.48, a: 1}
+  chargeRadius: 0.065
+  chargeBuildSeconds: 0.9
+  chargePulseStrength: 0.15
+  trailLifetime: 0.2
+  trailWidth: 0.016
+  projectileVisualScale: 0.65
+  impactDuration: 0.22
+  impactMaxRadius: 0.2
+  impactLineWidth: 0.006
 --- !u!1 &688091462220864453
 GameObject:
   m_ObjectHideFlags: 0

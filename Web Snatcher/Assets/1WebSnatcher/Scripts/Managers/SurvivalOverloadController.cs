@@ -42,7 +42,19 @@ namespace WebSnatcher
         public int RequiredCatches => catchesPerCharge;
         public bool IsCharged => Progress >= catchesPerCharge;
         public bool IsFiring => firing;
+
+        public float AimAngle => aimAngle;
+        public float MaximumAimDistance => maximumAimDistance;
+        public bool IsScoutTargeting =>
+            gaze != null && gaze.CurrentTarget != null;
+            
         public event Action ChargeChanged;
+
+        public event Action<Vector3, Vector3> ShotLaunched;
+        public event Action<Vector3> ShotHit;
+        public event Action<Vector3> ShotMissed;
+
+        public Vector3 CurrentShotPosition => shotPosition;
 
         private bool firing, bursting;
         private float impactAt, flightDistance;
@@ -121,6 +133,8 @@ namespace WebSnatcher
             trail.enabled = true;
             trail.SetPosition(0, shotPosition);
             trail.SetPosition(1, shotPosition);
+
+            ShotLaunched?.Invoke(shotPosition, shotDirection);
             if (logShots) Debug.Log("[WS Overload] FIRED (unguided)", this);
         }
 
@@ -136,7 +150,12 @@ namespace WebSnatcher
 #endif
             if (!firing) return;
             if (bursting) { AnimateImpact(); return; }
-            if (shotTarget == null || !shotTarget.activeInHierarchy) { Finish(); return; }
+            if (shotTarget == null || !shotTarget.activeInHierarchy)
+            {
+                ShotMissed?.Invoke(shotPosition);
+                Finish();
+                return;
+            }
 
             float step = projectileSpeed * Mathf.Min(Time.deltaTime, 0.06f);
             Vector3 previous = shotPosition;
@@ -167,13 +186,18 @@ namespace WebSnatcher
                 bursting = true;
                 impactAt = Time.time;
                 ring.enabled = true;
+                ShotHit?.Invoke(impactPosition);
                 game.DefeatStriker(shotTarget);
                 if (logShots) Debug.Log("[WS Overload] HIT", this);
                 return;
             }
             if (flightDistance >= maxFlightDistance)
             {
-                if (logShots) Debug.Log("[WS Overload] MISSED - charge consumed", this);
+                ShotMissed?.Invoke(shotPosition);
+
+                if (logShots)
+                    Debug.Log("[WS Overload] MISSED - charge consumed", this);
+
                 Finish();
             }
         }

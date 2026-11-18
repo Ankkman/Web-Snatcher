@@ -9,6 +9,10 @@ namespace WebSnatcher
     [DisallowMultipleComponent]
     public sealed class SurvivalGameManager : MonoBehaviour
     {
+
+        [Header("Startup")]
+        [SerializeField] private bool startImmediately = false;
+
         [Header("Scene dependencies")]
         [SerializeField] private MRUKBugSpawner scoutSpawner;
         [SerializeField] private GameObject strikerPrefab;
@@ -48,7 +52,11 @@ namespace WebSnatcher
         public int Score { get; private set; }
         public int Combo { get; private set; }
         public int DifficultyStage { get; private set; }
-        public float ElapsedSeconds => started ? Time.time - startTime : 0f;
+        public float ElapsedSeconds =>
+            started
+                ? Mathf.Max(0f,
+                    (IsRunning ? Time.time : gameOverAt) - startTime)
+                : 0f;
         public bool IsRunning { get; private set; }
         public GameObject ActiveStriker { get; private set; }
         public int CurrentMultiplier => Mathf.Clamp(1 + Combo / 5, 1, maximumScoreMultiplier);
@@ -88,14 +96,64 @@ namespace WebSnatcher
             Score = 0;
             Combo = 0;
             DifficultyStage = 0;
+
             lastCatchAt = float.NegativeInfinity;
+            started = false;
+            IsRunning = false;
+
+            if (overload != null)
+                overload.Initialize(this);
+
+            if (!startImmediately)
+            {
+                // Keep combat inactive during the onboarding sequence.
+                if (scoutSpawner != null)
+                    scoutSpawner.enabled = false;
+
+                if (tether != null)
+                    tether.enabled = false;
+
+                if (shield != null)
+                    shield.enabled = false;
+
+                if (gaze != null)
+                    gaze.SetTargetingEnabled(false);
+
+                Notify();
+                return;
+            }
+
+            BeginRun();
+        }
+
+        public void BeginRun()
+        {
+            if (started || IsRunning)
+                return;
+
             startTime = Time.time;
+            nextStrikerAt = Time.time + firstStrikerDelay;
+
             started = true;
             IsRunning = true;
-            nextStrikerAt = Time.time + firstStrikerDelay;
-            if (overload != null) overload.Initialize(this);
+
+            if (scoutSpawner != null)
+                scoutSpawner.enabled = true;
+
+            if (tether != null)
+                tether.enabled = true;
+
+            if (shield != null)
+                shield.enabled = true;
+
+            if (gaze != null)
+                gaze.SetTargetingEnabled(true);
+
             ApplyDifficulty();
             Notify();
+
+            if (logRunEvents)
+                Debug.Log("[WS Survival] RUN STARTED", this);
         }
 
         private void Update()

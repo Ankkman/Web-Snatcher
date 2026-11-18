@@ -47,6 +47,7 @@ namespace WebSnatcher
         private Material[][] highlightedMaterials;
         private bool isHighlighted;
         private static Material runtimeHighlightMaterial;
+        public static event Action<BugTarget> AnyCatchCompleted;
 
         private void Awake()
         {
@@ -158,6 +159,7 @@ namespace WebSnatcher
             if (State != CatchState.InFlight) return false;
             State = CatchState.Caught;
             CatchCompleted?.Invoke(this);
+            AnyCatchCompleted?.Invoke(this);
             return true;
         }
 
